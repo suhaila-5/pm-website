@@ -1,41 +1,56 @@
-const sql = require('mssql');
+const BMI = require('../models/BMI');
 
 const saveBMI = async(req, res) => {
     try {
         const { userId, weight, height } = req.body;
-        const bmi = (weight / ((height / 100) * (height / 100))).toFixed(2);
 
-        const request = new sql.Request();
-        const result = await request
-            .input('userId', sql.Int, userId)
-            .input('weight', sql.Decimal(5, 2), weight)
-            .input('height', sql.Decimal(5, 2), height)
-            .input('bmi', sql.Decimal(4, 2), parseFloat(bmi))
-            .query('INSERT INTO BMIRecords (UserId, Weight, Height, BMI) VALUES (@userId, @weight, @height, @bmi); SELECT SCOPE_IDENTITY() AS RecordId');
+        if (!userId || !weight || !height) {
+            return res.status(400).json({ message: 'Missing required fields' });
+        }
 
-        res.json({
-            id: result.recordset[0].RecordId,
+        const bmiValue = (weight / ((height / 100) * (height / 100))).toFixed(2);
+
+        // Determine BMI category
+        let category = '';
+        if (bmiValue < 18.5) category = 'Underweight';
+        else if (bmiValue >= 18.5 && bmiValue < 25) category = 'Normal';
+        else if (bmiValue >= 25 && bmiValue < 30) category = 'Overweight';
+        else category = 'Obese';
+
+        const bmi = await BMI.create({
             userId,
             weight,
             height,
-            bmi: parseFloat(bmi),
+            bmiValue: parseFloat(bmiValue),
+            category,
             date: new Date()
         });
+
+        res.status(201).json(bmi);
     } catch (error) {
+        console.error('Error saving BMI:', error);
         res.status(400).json({ message: error.message });
     }
 };
 
 const getBMIHistory = async(req, res) => {
     try {
-        const { userId } = req.params;
-        const request = new sql.Request();
-        const result = await request
-            .input('userId', sql.Int, userId)
-            .query('SELECT * FROM BMIRecords WHERE UserId = @userId ORDER BY RecordDate DESC');
+        const userId = parseInt(req.params.userId);
 
-        res.json(result.recordset);
+        if (isNaN(userId)) {
+            return res.status(400).json({ message: 'Invalid user ID' });
+        }
+
+        const bmiHistory = await BMI.findAll({
+            where: { userId },
+            order: [
+                ['date', 'DESC']
+            ]
+        });
+
+        res.json(bmiHistory);
     } catch (error) {
+        console.error('Error fetching BMI history:', error);
         res.status(400).json({ message: error.message });
     }
 };
