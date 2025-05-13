@@ -1,0 +1,29 @@
+# Use Node.js LTS version with Debian base
+FROM node:20-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install Python, build tools, and SQLite dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    sqlite3 \
+    libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy package files
+COPY server/package*.json ./
+
+# Install dependencies without SQL Server driver
+RUN npm install --omit=optional
+
+# Copy server files
+COPY server/ ./
+
+# Expose port 5000
+EXPOSE 5000
+
+# Start the server
+CMD ["node", "server.js"] 

@@ -3,10 +3,14 @@ const path = require('path');
 
 const sequelize = new Sequelize({
     dialect: 'sqlite',
-    storage: path.join(__dirname, '../database.sqlite'),
+    storage: '/app/database.sqlite', // Use absolute path in Docker
     logging: console.log, // Enable logging to see what's happening
     define: {
         timestamps: true
+    },
+    dialectOptions: {
+        // Add SQLite specific options
+        mode: 0o666
     }
 });
 

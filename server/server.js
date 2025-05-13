@@ -20,11 +20,17 @@ async function initializeDatabase() {
         await sequelize.authenticate();
         console.log('Database connection has been established successfully.');
 
-        // Sync all models
-        await sequelize.sync({ alter: true }); // This will update tables if model changes
+        // Force sync in development mode only
+        if (process.env.NODE_ENV === 'development') {
+            await sequelize.sync({ force: true }); // This will drop and recreate tables
+            console.log('Database tables dropped and recreated.');
+        } else {
+            await sequelize.sync(); // Normal sync in production
+        }
         console.log('All models were synchronized successfully.');
     } catch (err) {
         console.error('Unable to connect to the database:', err);
+        process.exit(1); // Exit if database connection fails
     }
 }
 
